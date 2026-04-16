@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import phoneBookService from './services/phoneBook.js'
+import './index.css'
 
 const DeleteButton = ({ onClick, id, object }) => {
   //console.log(id, object)
@@ -57,11 +58,33 @@ const Form = ({ addPerson, newName, handleNameChange, newNumber, handleNumberCha
   )
 }
 
+const AddedNotification = ({ name }) => {
+  if (name != null) {
+    return (
+      <div className = "added">
+        Added {name} 
+      </div>
+    )
+  }
+}
+
+const UpdateErrorNotification = ({ name }) => {
+  if (name != null) {
+    return (
+      <div className = "error">
+        Information of {name} has already been removed from server
+      </div>
+    )
+  }
+}
+
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
+  const [addedName, setAddedName] = useState(null)
+  const [updateError, setUpdateError] = useState(null)
 
   useEffect(() => {
     //console.log('effect')
@@ -84,6 +107,10 @@ const App = () => {
           .create(nameObject)
           .then(returnedValue => {
             setPersons(persons.concat(returnedValue))
+            setAddedName(newName)
+            setTimeout(() => {
+              setAddedName(null)
+            }, 5000)
           })
       } else {
         if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
@@ -92,6 +119,14 @@ const App = () => {
             .then(updatedData => {
               console.log(updatedData)
               setPersons(persons.map(person => person.id === updatedData.id ? updatedData : person))
+            })
+            .catch(error => {
+              //console.log(error)
+              setUpdateError(newName)
+              setTimeout(() => {
+                setUpdateError(null)
+                setPersons(persons.filter(person => person.name != newName))
+              }, 5000)
             })
         }
       }
@@ -151,6 +186,10 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+
+      <AddedNotification name = {addedName}/>
+
+      <UpdateErrorNotification name = {updateError}/>
       
       <Filter filter = {filter} onChange = {handleFilterName}/>
 
