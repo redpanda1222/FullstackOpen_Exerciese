@@ -117,7 +117,7 @@ const App = () => {
           phoneBookService
             .update(found.id, nameObject)
             .then(updatedData => {
-              console.log(updatedData)
+              //console.log(updatedData)
               setPersons(persons.map(person => person.id === updatedData.id ? updatedData : person))
             })
             .catch(error => {

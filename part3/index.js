@@ -64,7 +64,10 @@ app.get('/', (request, response) => {
   response.send('<h1>Hello World! My name is Panda!</h1>')
 })
 
-app.get('/api/notes', (request, response) => {
+app.get('/:api/notes', (request, response) => {
+  const api = request.params.api;
+  console.log(api);
+  if (api !== "1594") return response.status(401).end()
   response.json(notes)
 })
 
@@ -195,6 +198,24 @@ app.post('/api/persons', (request, response) => {
   //console.log(persons);
 
   response.json(newPerson);
+})
+
+app.put('/api/persons/:id', (request, response) => {
+  const body = request.body;
+  const id = request.params.id;
+
+  if (!body) return response.status(400).json({ error: "content is missing"})
+
+  if (!body.name || !body.number) return response.status(400).json({ error: "number is missing" })
+
+  const p = {
+    id: id,
+    name: body.name,
+    number: body.number
+  }
+  persons = persons.map(person => person.id === id ? p : person);
+
+  response.json(p);
 })
 
 const unknownEndpoint = (request, response) => {
