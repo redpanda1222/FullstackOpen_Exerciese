@@ -1,4 +1,4 @@
-GET http://localhost:3001/api/notes
+GET http://localhost:3001/1594/notes
 
 ###
 POST http://localhost:3001/api/notes/
@@ -33,3 +33,15 @@ content-type: application/json
     "name": "Jhon Doe",
     "number": "69-69696969"
 }
+
+###
+PUT http://localhost:3001/api/persons/1
+content-type: application/json
+
+{
+    "name": "Arto Hellas",
+    "number": "9693"
+}
+
+###
+GET https://phonebook-zwx1.onrender.com/api/persons

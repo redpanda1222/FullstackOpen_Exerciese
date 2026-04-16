@@ -3,6 +3,8 @@ const app = express()
 const cors = require('cors');
 var morgan = require('morgan')
 
+app.use(express.static('dist'))
+
 let notes = [
   {
     id: "1",
