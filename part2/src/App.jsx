@@ -78,6 +78,16 @@ const UpdateErrorNotification = ({ name }) => {
   }
 }
 
+const AddPersonErrorNoti = ({ addErrorNoti }) => {
+  if (addErrorNoti !== null) {
+    return ( 
+      <div className = "error"> 
+        {addErrorNoti}
+      </div>
+    )
+  }
+}
+
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
@@ -85,6 +95,7 @@ const App = () => {
   const [filter, setFilter] = useState('')
   const [addedName, setAddedName] = useState(null)
   const [updateError, setUpdateError] = useState(null)
+  const [addErrorNoti, setaddErrorNoti] = useState(null)
 
   useEffect(() => {
     //console.log('effect')
@@ -111,6 +122,15 @@ const App = () => {
             setTimeout(() => {
               setAddedName(null)
             }, 5000)
+            setNewName('')
+            setNewNumber('')
+          })
+          .catch(error => {
+            //console.log(error);
+            setaddErrorNoti(error.response.data.error)
+            setTimeout(() => {
+              setaddErrorNoti(null)
+            }, 5000)
           })
       } else {
         if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
@@ -119,6 +139,8 @@ const App = () => {
             .then(updatedData => {
               //console.log(updatedData)
               setPersons(persons.map(person => person.id === updatedData.id ? updatedData : person))
+              setNewName('')
+              setNewNumber('')
             })
             .catch(error => {
               //console.log(error)
@@ -133,8 +155,6 @@ const App = () => {
     } else {
       alert('Nothing is added')
     }
-    setNewName('')
-    setNewNumber('')
     //console.log(persons)
   }
 
@@ -190,6 +210,8 @@ const App = () => {
       <AddedNotification name = {addedName}/>
 
       <UpdateErrorNotification name = {updateError}/>
+
+      <AddPersonErrorNoti addErrorNoti = {addErrorNoti}/>
       
       <Filter filter = {filter} onChange = {handleFilterName}/>
 

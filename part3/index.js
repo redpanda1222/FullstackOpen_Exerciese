@@ -1,9 +1,12 @@
+
 const express = require('express')
 const app = express()
 const cors = require('cors');
 var morgan = require('morgan')
 
 app.use(express.static('dist'))
+app.use(cors());
+app.use(express.json());
 
 let notes = [
   {
@@ -23,28 +26,7 @@ let notes = [
   }
 ]
 
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-];
+const Person = require('./models/person')
 
 const requestLogger = (request, response, next) => {
   console.log('Method:', request.method)
@@ -59,8 +41,7 @@ morgan.token('body', (req) => JSON.stringify(req.body))
 //app.use(requestLogger);
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
-app.use(cors());
-app.use(express.json());
+
 
 app.get('/', (request, response) => {
   response.send('<h1>Hello World! My name is Panda!</h1>')
@@ -122,52 +103,68 @@ app.post('/api/notes', (request, response) => {
 /* 
   get all the data of persons {json}
 */
-app.get('/api/persons', (request, response) => {
-  response.json(persons);
+app.get('/api/persons', (request, response, next) => {
+  Person.find({}).then(result => {
+      response.json(result);
+      console.log("phonebook:")
+      result.forEach(person => {
+          console.log(person.name, person.number)
+      })
+  })
+  .catch(error => next(error))
 })
 
 /* 
   get persons info {text/html}
 */
-app.get('/api/persons/info', (request, response) => {
-  response.send(`<p>Phonebook has info for ${persons.length} people</p>
+app.get('/api/persons/info', (request, response, next) => {
+  Person.find({}).then(result => {
+    response.send(`<p>Phonebook has info for ${result.length} people</p>
                  <p>${new Date()}</p>`)
+  })
+  .catch(error => next(error));
+  
 })
 
 /* 
   get specific person info by using id {json}
 */
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
   const id = request.params.id;
-  const person = persons.find(person => person.id === id);
-  if (person) {
-    response.json(person);
-  } else {
-    response.status(404).end();
-  }
+  // const person = persons.find(person => person.id === id);
+  // if (person) {
+  //   response.json(person);
+  // } else {
+  //   response.status(404).end();
+  // }
+  Person.findById(id).then(person => {
+    if (person) {
+      response.json(person);
+    } else {
+      response.status(404).end();
+    }
+  })
+  .catch(error => {
+    next(error);
+  })
 })
 
 /*
   delete specific person fron persons data {}
 */
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   const id = request.params.id;
-  persons = persons.filter(person => person.id !== id);
-
-  response.status(204).end()
+  Person.findByIdAndDelete(id)
+    .then(result => {
+      response.status(204).end();
+    })
+    .catch(error => next(error));
 })
-
-const generatePersonId = () => {
-  const maxId = persons.length > 0
-    ? Math.max(...persons.map(n => Number(n.id)))
-    : 0
-  return String(maxId + 1)
-}
 
 /*
   create new person and added to persons data if data is valid
 */
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const body = request.body;
 
   if (!body) {
@@ -182,27 +179,30 @@ app.post('/api/persons', (request, response) => {
     })
   }
 
-  const newPerson = {
-    id: generatePersonId(),
+  const newPerson = new Person({
     name: body.name,
     number: body.number
-  }
+  })
 
-  const search = persons.find(person => person.name.toLowerCase() === body.name.toLowerCase());
+  // const search = persons.find(person => person.name.toLowerCase() === body.name.toLowerCase());
 
-  if (search) {
-    return response.status(400).json({
-      error: "name must be unique"
-    })
-  }
+  // if (search) {
+  //   return response.status(400).json({
+  //     error: "name must be unique"
+  //   })
+  // }
 
-  persons = persons.concat(newPerson);
-  //console.log(persons);
-
-  response.json(newPerson);
+  newPerson.save().then(savedNote => {
+    console.log("saved newPerson");
+    console.log(savedNote);
+    response.json(savedNote);
+  })
+  .catch(e => {
+    next(e);
+  })
 })
 
-app.put('/api/persons/:id', (request, response) => {
+app.put('/api/persons/:id', (request, response, next) => {
   const body = request.body;
   const id = request.params.id;
 
@@ -210,23 +210,75 @@ app.put('/api/persons/:id', (request, response) => {
 
   if (!body.name || !body.number) return response.status(400).json({ error: "number is missing" })
 
-  const p = {
-    id: id,
-    name: body.name,
-    number: body.number
-  }
-  persons = persons.map(person => person.id === id ? p : person);
+  Person.findById(id).then(p => {
+    if (!p) {
+      return response.status(404).end();
+    }
 
-  response.json(p);
+    p.name = body.name;
+    p.number = body.number;
+
+    return p.save().then(result => {
+      response.json(p);
+    })
+  })
+  .catch(error => next(error));
 })
 
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' })
 }
 
-app.use(unknownEndpoint)
+app.use(unknownEndpoint);
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' });
+  } else if (error.name == 'ValidationError') {
+    return response.status(400).json({ error: error.message });
+  }
+
+  next(error);
+}
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+
+
+// let persons = [
+//     { 
+//       "id": "1",
+//       "name": "Arto Hellas", 
+//       "number": "040-123456"
+//     },
+//     { 
+//       "id": "2",
+//       "name": "Ada Lovelace", 
+//       "number": "39-44-5323523"
+//     },
+//     { 
+//       "id": "3",
+//       "name": "Dan Abramov", 
+//       "number": "12-43-234345"
+//     },
+//     { 
+//       "id": "4",
+//       "name": "Mary Poppendieck", 
+//       "number": "39-23-6423122"
+//     }
+// ];
+
+/*
+const generatePersonId = () => {
+  const maxId = persons.length > 0
+    ? Math.max(...persons.map(n => Number(n.id)))
+    : 0
+  return String(maxId + 1)
+}
+  */
